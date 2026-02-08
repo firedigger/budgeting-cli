@@ -1,0 +1,32 @@
+.venv/
+__pycache__/
+*.pyc
+budgeting.sqlite
+
+# Local/derived data
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Personal bank exports (avoid committing sensitive data)
+*.csv
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# VS Code
+.vscode/
+
+# OS
+Thumbs.db
+Desktop.ini
