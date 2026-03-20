@@ -204,6 +204,13 @@ def run_import(csv_path: Path) -> None:
             remaining_ids.remove(tx_id)
 
         console.print("Done.")
+
+        # Backup the DB after a successful import run.
+        # (No backup on early exit / abort, since the run didn't fully complete.)
+        try:
+            db.backup_database(conn)
+        except Exception as e:  # noqa: BLE001
+            console.print(f"[yellow]Warning: could not create DB backup: {e}[/yellow]")
     finally:
         conn.close()
 

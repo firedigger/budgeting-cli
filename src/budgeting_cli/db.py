@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -201,3 +202,45 @@ def update_transaction_state(
         "UPDATE transactions SET category=?, ignored=? WHERE id=?",
         (category, 1 if ignored else 0, transaction_id),
     )
+
+
+def get_most_recent_booking_date(conn: sqlite3.Connection) -> str | None:
+    row = conn.execute("SELECT MAX(booking_date) AS d FROM transactions").fetchone()
+    if row is None:
+        return None
+    val = row["d"]
+    return str(val) if val else None
+
+
+def _get_main_db_path(conn: sqlite3.Connection) -> Path | None:
+    row = conn.execute("PRAGMA database_list").fetchall()
+    for r in row:
+        if str(r[1]) == "main":
+            file = r[2]
+            if file:
+                return Path(str(file))
+            return None
+    return None
+
+
+def backup_database(conn: sqlite3.Connection, backup_path: Path | None = None) -> Path:
+    """Create a consistent backup of the current DB to a .bak file.
+
+    Default target is alongside the live DB as `<db_filename>.bak`.
+    """
+
+    src_path = _get_main_db_path(conn) or default_db_path()
+    backup_path = backup_path or src_path.with_name(src_path.name + ".bak")
+
+    tmp_path = backup_path.with_name(backup_path.name + ".tmp")
+    if tmp_path.exists():
+        tmp_path.unlink()
+
+    # Use SQLite's backup API for a consistent snapshot.
+    with closing(sqlite3.connect(tmp_path)) as backup_conn:
+        conn.backup(backup_conn)
+        backup_conn.commit()
+
+    # Atomic replace (best-effort) so the .bak is never half-written.
+    tmp_path.replace(backup_path)
+    return backup_path

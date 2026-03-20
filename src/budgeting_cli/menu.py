@@ -9,16 +9,58 @@ from rich.console import Console
 from budgeting_cli import db
 from budgeting_cli.commands.import_cmd import run_import
 from budgeting_cli.commands.list_transactions_cmd import fetch_transactions, run_list_transactions_range
-from budgeting_cli.commands.report_cmd import run_report_month, run_report_range
+from budgeting_cli.commands.report_cmd import run_report_month, run_report_monthly_breakdown, run_report_range
 from budgeting_cli.commands.reset_cmd import run_reset
 from budgeting_cli.commands.sort_unsorted_cmd import run_sort_unsorted
 
 
 console = Console()
+IMPORTS_DIR_NAME = "imports"
 
 
 def _pause_to_menu() -> None:
     questionary.text("Press Enter to return to menu", default="").ask()
+
+
+def _imports_dir() -> Path:
+    return Path.cwd() / IMPORTS_DIR_NAME
+
+
+def _list_csv_files(csv_dir: Path) -> list[Path]:
+    return sorted(
+        [p for p in csv_dir.iterdir() if p.is_file() and p.suffix.lower() == ".csv"],
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+
+def _pick_csv_from_imports() -> Path | None:
+    csv_dir = _imports_dir()
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    csv_files = _list_csv_files(csv_dir)
+    if not csv_files:
+        console.print(f"No CSV files found in `{csv_dir}`.")
+        console.print(f"Put your bank export into `{csv_dir}` and try again.")
+        return None
+
+    selected = questionary.select(
+        "Pick CSV to import:",
+        choices=[
+            questionary.Choice(
+                title=f"{p.name}  ({date.fromtimestamp(p.stat().st_mtime).isoformat()})",
+                value=p,
+            )
+            for p in csv_files
+        ]
+        + ["Back"],
+        use_shortcuts=True,
+        use_search_filter=True,
+        use_jk_keys=False,
+    ).ask()
+
+    if selected is None or selected == "Back":
+        return None
+    return Path(selected)
 
 
 def _unsorted_count() -> int:
@@ -32,6 +74,14 @@ def _unsorted_count() -> int:
             """
         ).fetchone()
         return int(row["c"] or 0)
+    finally:
+        conn.close()
+
+
+def _most_recent_booking_date() -> str | None:
+    conn = db.connect()
+    try:
+        return db.get_most_recent_booking_date(conn)
     finally:
         conn.close()
 
@@ -80,6 +130,7 @@ def _pick_period() -> tuple[str, date | None, date | None]:
                 "Year",
                 "All",
                 "Past 7d",
+                "Past 14d",
                 "Past 30d",
                 "Back",
             ],
@@ -117,6 +168,10 @@ def _pick_period() -> tuple[str, date | None, date | None]:
         if choice == "Past 7d":
             start, end = _rolling_days_range(today, 7)
             return f"past 7 days ending {today.isoformat()}", start, end
+
+        if choice == "Past 14d":
+            start, end = _rolling_days_range(today, 14)
+            return f"past 14 days ending {today.isoformat()}", start, end
 
         if choice == "Past 30d":
             start, end = _rolling_days_range(today, 30)
@@ -274,12 +329,14 @@ def run_menu() -> None:
         if clear_before_menu:
             console.clear()
         unsorted = _unsorted_count()
+        most_recent = _most_recent_booking_date() or "—"
         choice = questionary.select(
-            "What do you want to do?",
+            f"What do you want to do?\nMost recent recorded transaction date: {most_recent}",
             choices=[
                 "Import new CSV",
                 f"Sort unsorted ({unsorted})",
                 "Report",
+                "Monthly category table (past 12 months)",
                 "Transactions (biggest -> smallest)",
                 "Reset (wipe all data)",
                 "Exit",
@@ -291,14 +348,11 @@ def run_menu() -> None:
             return
 
         if choice == "Import new CSV":
-            csv_path_str = questionary.path(
-                "Path to Nordea CSV export:",
-                validate=lambda p: Path(p).exists() or "File does not exist",
-            ).ask()
-            if not csv_path_str:
+            csv_path = _pick_csv_from_imports()
+            if csv_path is None:
                 clear_before_menu = False
                 continue
-            run_import(Path(csv_path_str))
+            run_import(csv_path)
             clear_before_menu = True
             continue
 
@@ -314,6 +368,12 @@ def run_menu() -> None:
 
         if choice == "Report":
             _run_report_menu()
+            clear_before_menu = False
+            continue
+
+        if choice == "Monthly category table (past 12 months)":
+            run_report_monthly_breakdown(months=12)
+            _pause_to_menu()
             clear_before_menu = False
             continue
 

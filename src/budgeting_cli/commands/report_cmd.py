@@ -40,6 +40,13 @@ def _month_range(yyyy_mm: str) -> MonthRange:
     return MonthRange(start=start, end=end)
 
 
+def _shift_month(d: date, month_delta: int) -> date:
+    month_index = (d.year * 12 + (d.month - 1)) + month_delta
+    year = month_index // 12
+    month = (month_index % 12) + 1
+    return date(year, month, 1)
+
+
 def get_expense_totals_by_category(
     conn, *, start: Optional[date], end: Optional[date]
 ) -> dict[str, int]:
@@ -76,6 +83,63 @@ def get_expense_totals_by_category(
     for cat in ("shared", "alex", "luiza", "unsorted"):
         totals.setdefault(cat, 0)
     return totals
+
+
+def get_monthly_expense_totals_by_category(
+    conn,
+    *,
+    months: int,
+    today: Optional[date] = None,
+) -> list[tuple[str, dict[str, int]]]:
+    if months <= 0:
+        raise ValueError("months must be positive")
+
+    today = today or date.today()
+    current_month = date(today.year, today.month, 1)
+    start = _shift_month(current_month, -(months - 1))
+    end = _shift_month(current_month, 1)
+
+    rows = conn.execute(
+        """
+        SELECT substr(booking_date, 1, 7) AS month,
+               COALESCE(category, 'unsorted') AS category,
+               SUM(amount_cents) AS total_cents
+        FROM transactions
+        WHERE booking_date >= ? AND booking_date < ?
+          AND amount_cents < 0
+          AND ignored=0
+        GROUP BY substr(booking_date, 1, 7), COALESCE(category, 'unsorted')
+        ORDER BY month ASC
+        """,
+        (start.isoformat(), end.isoformat()),
+    ).fetchall()
+
+    totals_by_month: dict[str, dict[str, int]] = {}
+    for row in rows:
+        month = str(row["month"])
+        category = str(row["category"])
+        month_totals = totals_by_month.setdefault(month, {})
+        month_totals[category] = int(row["total_cents"] or 0)
+
+    result: list[tuple[str, dict[str, int]]] = []
+    for offset in range(months):
+        month_start = _shift_month(start, offset)
+        month_label = month_start.strftime("%Y-%m")
+        totals = totals_by_month.get(month_label, {})
+        normalized = {cat: totals.get(cat, 0) for cat in ("shared", "alex", "luiza", "unsorted")}
+        result.append((month_label, normalized))
+    return result
+
+
+def filter_zero_total_months(
+    rows: list[tuple[str, dict[str, int]]],
+) -> list[tuple[str, dict[str, int]]]:
+    filtered: list[tuple[str, dict[str, int]]] = []
+    for month, totals in rows:
+        total = sum(abs(value) for value in totals.values())
+        if total > 0:
+            filtered.append((month, totals))
+    return filtered
 
 
 def run_report_range(*, title: str, start: Optional[date], end: Optional[date]) -> Table:
@@ -119,6 +183,45 @@ def run_report_month(month: str) -> Table:
         start=r.start,
         end=r.end,
     )
+
+
+def run_report_monthly_breakdown(*, months: int = 12, today: Optional[date] = None) -> Table:
+    conn = db.connect()
+    try:
+        rows = get_monthly_expense_totals_by_category(conn, months=months, today=today)
+        rows = filter_zero_total_months(rows)
+
+        table = Table(title=f"Monthly expenses by category (past {months} months)")
+        table.add_column("Month")
+        table.add_column("Shared", justify="right")
+        table.add_column("Alex", justify="right")
+        table.add_column("Luiza", justify="right")
+        table.add_column("Unsorted", justify="right")
+        table.add_column("Total", justify="right")
+
+        if not rows:
+            console.print(f"No expenses in the past {months} months.")
+            return table
+
+        for month, totals in rows:
+            shared = abs(totals["shared"])
+            alex = abs(totals["alex"])
+            luiza = abs(totals["luiza"])
+            unsorted = abs(totals["unsorted"])
+            total = shared + alex + luiza + unsorted
+            table.add_row(
+                month,
+                format_eur(shared),
+                format_eur(alex),
+                format_eur(luiza),
+                format_eur(unsorted),
+                format_eur(total),
+            )
+
+        console.print(table)
+        return table
+    finally:
+        conn.close()
 
 
 @report_app.callback(invoke_without_command=True)
