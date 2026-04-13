@@ -5,6 +5,7 @@ budgeting.sqlite
 
 # Local/derived data
 *.sqlite
+*.sqlite.bak
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
