@@ -1,34 +1,16 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 from budgeting_cli.fingerprint import fingerprint_fields
+from budgeting_cli.imported_row import ImportedRow
 from budgeting_cli.text_norm import normalize_vendor_key
 
 
-@dataclass(frozen=True)
-class NordeaRow:
-    booking_date: date
-    booking_date_raw: str
-    status: str  # 'booked' | 'reserved'
-
-    amount_cents: int
-    currency: str
-
-    sender: str
-    recipient: str
-    name: str
-    title: str
-    message: str
-    reference_number: str
-    balance: str
-
-    vendor_key: str
-    fingerprint: str
+NordeaRow = ImportedRow
 
 
 _EXPECTED_HEADERS = [
@@ -75,7 +57,7 @@ def _clean_row(values: list[str]) -> list[str]:
     return values
 
 
-def read_nordea_rows(csv_path: Path, *, import_day: date | None = None) -> list[NordeaRow]:
+def read_nordea_rows(csv_path: Path, *, import_day: date | None = None) -> list[ImportedRow]:
     import_day = date.today() if import_day is None else import_day
 
     with _open_text(csv_path) as f:
@@ -92,7 +74,7 @@ def read_nordea_rows(csv_path: Path, *, import_day: date | None = None) -> list[
                 + ", ".join(_EXPECTED_HEADERS)
             )
 
-        rows: list[NordeaRow] = []
+        rows: list[ImportedRow] = []
         for raw_values in reader:
             values = _clean_row(raw_values)
             if not values or all(v.strip() == "" for v in values):
@@ -141,7 +123,7 @@ def read_nordea_rows(csv_path: Path, *, import_day: date | None = None) -> list[
             )
 
             rows.append(
-                NordeaRow(
+                ImportedRow(
                     booking_date=booking_date,
                     booking_date_raw=booking_date_raw_norm,
                     status=status,

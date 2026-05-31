@@ -17,6 +17,7 @@ Core workflow:
 
 Storage:
 - SQLite file `budgeting.sqlite` in the current working directory
+- Do not delete or wipe an existing `budgeting.sqlite` unless the user explicitly asks for it.
 
 Key invariants:
 - Expenses-only: only rows with `amount_cents < 0` are stored/considered.
@@ -24,7 +25,6 @@ Key invariants:
 - Ignored: `ignored=1` excludes rows from reports and unsorted sorting.
 
 ## How dedupe works (fingerprint)
-
 
 Today the “real” spend categories are hard-coded to `shared`, `alex`, `luiza`.
 
@@ -82,17 +82,22 @@ Rules are applied in this order:
 
 ## Switching / Adding a new bank provider
 
-Today, Nordea parsing is hard-coded via `read_nordea_rows()`.
+CSV import goes through header auto-detection in:
+- [src/budgeting_cli/bank_csv.py](src/budgeting_cli/bank_csv.py)
 
-The simplest way to add another bank:
+Current provider parsers:
+- Nordea: [src/budgeting_cli/nordea_csv.py](src/budgeting_cli/nordea_csv.py)
+- EntryDate export format: [src/budgeting_cli/entrydate_csv.py](src/budgeting_cli/entrydate_csv.py)
+
+To add another bank:
 
 1) Create a new parser module
 - Add `src/budgeting_cli/<bank>_csv.py`.
 - Implement a function like:
 
-  `read_<bank>_rows(csv_path: Path, *, import_day: date | None = None) -> list[NordeaRow]`
+  `read_<bank>_rows(csv_path: Path, *, import_day: date | None = None) -> list[ImportedRow]`
 
-  You can reuse the existing `NordeaRow` dataclass (it’s really a generic normalized transaction record).
+  Reuse the generic `ImportedRow` dataclass from `src/budgeting_cli/imported_row.py`.
 
 2) Ensure the parser produces consistent normalized fields
 - `amount_cents` must be integer cents, negative for expenses.
@@ -101,14 +106,8 @@ The simplest way to add another bank:
 - `fingerprint` must be deterministic and stable across re-imports.
 
 3) Wire it into imports
-Two options:
-
-A) Minimal change (single provider)
-- Replace `read_nordea_rows(...)` usage in `src/budgeting_cli/commands/import_cmd.py` with your new reader.
-
-B) Provider switch (recommended if you expect multiple banks)
-- Add a `--provider` option (e.g. `nordea`, `mybank`) to the import command.
-- Create a small registry mapping provider name -> reader function.
+- Add the expected headers and reader to `src/budgeting_cli/bank_csv.py`.
+- Prefer header auto-detection. Ask the user only if formats become ambiguous or detection fails.
 - Keep the normalization contract identical so DB schema and the rest of the app doesn’t change.
 
 ## Where to extend behavior safely

@@ -7,14 +7,15 @@ import sqlite3
 import typer
 
 from budgeting_cli import db
-from budgeting_cli.nordea_csv import NordeaRow, read_nordea_rows
+from budgeting_cli.bank_csv import read_bank_rows
+from budgeting_cli.imported_row import ImportedRow
 from budgeting_cli.ui import clear_screen, console, prompt_category_one_question, render_transaction_panel
 
 
 import_app = typer.Typer(add_completion=False, no_args_is_help=True)
 
 
-def _insert_rows(conn: sqlite3.Connection, rows: list[NordeaRow], vendor_rules: dict[str, db.VendorRule]) -> list[int]:
+def _insert_rows(conn: sqlite3.Connection, rows: list[ImportedRow], vendor_rules: dict[str, db.VendorRule]) -> list[int]:
     inserted_ids: list[int] = []
     for r in rows:
         rule = vendor_rules.get(r.vendor_key)
@@ -57,7 +58,7 @@ def run_import(csv_path: Path) -> None:
         vendor_rules = db.load_vendor_rules(conn)
         vendor_amount_rules = db.load_vendor_amount_rules(conn)
         ignore_vendor_rules = db.load_ignore_vendor_rules(conn)
-        rows = read_nordea_rows(csv_path, import_day=date.today())
+        rows = read_bank_rows(csv_path, import_day=date.today())
         # Expenses-only: ignore income/refunds completely (do not store).
         rows = [r for r in rows if r.amount_cents < 0]
 
@@ -217,5 +218,5 @@ def run_import(csv_path: Path) -> None:
 
 @import_app.callback(invoke_without_command=True)
 def import_csv(csv_path: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True)) -> None:
-    """Import a Nordea CSV export and categorize new transactions."""
+    """Import a supported bank CSV export and categorize new transactions."""
     run_import(csv_path)
