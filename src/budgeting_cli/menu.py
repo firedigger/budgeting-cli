@@ -189,6 +189,7 @@ def _run_report_menu() -> None:
             title=f"Expenses by category ({label})",
             start=start,
             end=end,
+            effective_period_unit="day",
         )
         return
 
@@ -200,10 +201,12 @@ def _run_report_menu() -> None:
         )
         return
 
+    effective_period_unit = "month" if label.isdigit() else "day" if label.startswith("week ") else None
     run_report_range(
         title=f"Expenses by category ({label})",
         start=start,
         end=end,
+        effective_period_unit=effective_period_unit,
     )
     return
 

@@ -85,6 +85,18 @@ Use the menu (recommended):
 
 Creates `budgeting.sqlite` in the current directory.
 
+## Income Balance
+
+To include fixed monthly income in reports, create `budgeting.toml` next to `budgeting.sqlite`:
+
+```toml
+[income]
+alex_monthly_eur = 3000.00
+luiza_monthly_eur = 3000.00
+```
+
+Reports subtract each person's expense share from their income. Expense share is that person's own category plus half of `shared`; `unsorted` stays visible but is not assigned to either person.
+
 ## Tests
 
 Install test dependencies:
@@ -104,3 +116,5 @@ python -m pytest -q
 To support another import format or categories, you can change the code or easier you can use any AI in the repo to help you. More detailed guidance is in `agents.md`.
 
 ## TODO
+
+- [x] Add fair income for Alex and Luiza to calculate in reports the fair funds usage balance

@@ -2,6 +2,7 @@
 __pycache__/
 *.pyc
 budgeting.sqlite
+budgeting.toml
 
 # Local/derived data
 *.sqlite
@@ -19,6 +20,7 @@ budgeting.sqlite
 
 # Python tooling
 .pytest_cache/
+.pytest_tmp/
 .mypy_cache/
 .ruff_cache/
 *.egg-info/
