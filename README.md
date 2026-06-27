@@ -114,7 +114,3 @@ python -m pytest -q
 ## Customization
 
 To support another import format or categories, you can change the code or easier you can use any AI in the repo to help you. More detailed guidance is in `agents.md`.
-
-## TODO
-
-- [x] Add fair income for Alex and Luiza to calculate in reports the fair funds usage balance
