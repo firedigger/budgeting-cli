@@ -11,7 +11,7 @@ A small CLI for importing bank transaction records and interactively categorizin
 │ Date     2026-01-19 (booked) │
 │ Amount   20.00 EUR (EUR)     │
 │ Name     CARD*GROCERY STORE  │
-│ Message  FINLAND             │
+│ Message  GROCERIES           │
 │ Ref      1234567890          │
 ╰──────────────────────────────╯
 ? Pick category + remember? (Use shortcuts or arrow keys)
