@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import typer
 
+from budgeting_cli.commands.chart_cmd import chart_app
 from budgeting_cli.commands.import_cmd import import_app
 from budgeting_cli.commands.report_cmd import report_app
 from budgeting_cli.commands.reset_cmd import reset_app
@@ -19,6 +20,7 @@ def _root_callback(ctx: typer.Context) -> None:
 
 app.add_typer(import_app, name="import")
 app.add_typer(sort_unsorted_app, name="sort-unsorted")
+app.add_typer(chart_app, name="chart")
 app.add_typer(report_app, name="report")
 app.add_typer(reset_app, name="reset")
 

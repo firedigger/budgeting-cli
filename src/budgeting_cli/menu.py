@@ -7,6 +7,7 @@ import questionary
 from rich.console import Console
 
 from budgeting_cli import db
+from budgeting_cli.commands.chart_cmd import generate_month_chart
 from budgeting_cli.commands.import_cmd import run_import
 from budgeting_cli.commands.list_transactions_cmd import fetch_transactions, run_list_transactions_range
 from budgeting_cli.commands.report_cmd import run_report_month, run_report_monthly_breakdown, run_report_range
@@ -339,6 +340,7 @@ def run_menu() -> None:
                 "Import new CSV",
                 f"Sort unsorted ({unsorted})",
                 "Report",
+                "Generate total spending chart (PNG)",
                 "Monthly category table (past 12 months)",
                 "Transactions (biggest -> smallest)",
                 "Reset (wipe all data)",
@@ -371,6 +373,22 @@ def run_menu() -> None:
 
         if choice == "Report":
             _run_report_menu()
+            clear_before_menu = False
+            continue
+
+        if choice == "Generate total spending chart (PNG)":
+            month = questionary.text(
+                "Month (YYYY-MM):",
+                default=_default_month(),
+            ).ask()
+            if month:
+                try:
+                    chart_path = generate_month_chart(month)
+                except (RuntimeError, ValueError) as exc:
+                    console.print(f"[red]Could not generate chart:[/] {exc}")
+                else:
+                    console.print(f"[green]Saved chart:[/] {chart_path}")
+            _pause_to_menu()
             clear_before_menu = False
             continue
 

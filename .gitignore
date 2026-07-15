@@ -5,6 +5,7 @@ budgeting.sqlite
 budgeting.toml
 
 # Local/derived data
+charts/
 *.sqlite
 *.sqlite.bak
 *.sqlite-journal

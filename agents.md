@@ -2,6 +2,14 @@
 
 This file captures context for agents (and future maintainers) so changes stay consistent with the original goals.
 
+## Privacy before publishing
+
+Before staging, committing, or pushing, review the complete intended diff for personal information.
+
+- Do not version real income amounts, transaction data, account details, generated financial charts, or specific geography below country level.
+- Keep local databases, configuration files, bank exports, and generated charts ignored by Git.
+- Use clearly synthetic financial values in tests and documentation.
+
 ## What this project is
 
 A local-first, interactive CLI for budgeting from bank CSV exports.

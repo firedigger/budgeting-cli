@@ -11,7 +11,7 @@ A small CLI for importing bank transaction records and interactively categorizin
 │ Date     2026-01-19 (booked) │
 │ Amount   20.00 EUR (EUR)     │
 │ Name     CARD*GROCERY STORE  │
-│ Message  HELSINKI            │
+│ Message  FINLAND             │
 │ Ref      1234567890          │
 ╰──────────────────────────────╯
 ? Pick category + remember? (Use shortcuts or arrow keys)
@@ -80,6 +80,18 @@ Use the menu (recommended):
 ```powershell
 ./budget.ps1
 ```
+
+Generate a plain monthly chart from the menu with **Generate total spending chart (PNG)**,
+or run it directly:
+
+```powershell
+./budget.ps1 chart --month 2026-07
+```
+
+The PNG is saved as `charts/total-spending-YYYY-MM.png`. It plots all non-ignored expenses as
+a daily cumulative line against the previous calendar month. Alex's and Luiza's configured
+monthly incomes are combined into one horizontal reference line. If the selected month has no
+imported transactions, generation stops with an error that includes the latest database date.
 
 ## Storage
 
