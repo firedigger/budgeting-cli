@@ -159,6 +159,7 @@ def run_import(csv_path: Path) -> None:
                 title=str(row["title"] or ""),
                 message=str(row["message"] or ""),
                 reference_number=str(row["reference_number"] or ""),
+                remaining_import_count=len(remaining_ids),
             )
 
             choice = prompt_category_one_question()

@@ -107,3 +107,57 @@ def test_reimport_same_file_no_effect_including_unsorted(tmp_path: Path, monkeyp
     import_cmd.run_import(csv_path)
     rows2 = _db_rows(db_path)
     assert [dict(r) for r in rows2] == [dict(r) for r in rows1]
+
+
+def test_import_panel_receives_decreasing_remaining_count(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+
+    csv_path = tmp_path / "two-new-transactions.csv"
+    _write_nordea_csv(
+        csv_path,
+        rows=[
+            {
+                "Booking date": "2026/01/10",
+                "Amount": "-10,00",
+                "Sender": "A",
+                "Recipient": "B",
+                "Name": "Vendor One",
+                "Title": "Vendor One",
+                "Message": "category-one",
+                "Reference number": "ref1",
+                "Balance": "0",
+                "Currency": "EUR",
+            },
+            {
+                "Booking date": "2026/01/11",
+                "Amount": "-20,00",
+                "Sender": "A",
+                "Recipient": "B",
+                "Name": "Vendor Two",
+                "Title": "Vendor Two",
+                "Message": "category-two",
+                "Reference number": "ref2",
+                "Balance": "0",
+                "Currency": "EUR",
+            },
+        ],
+    )
+
+    shown_remaining_counts: list[int] = []
+
+    def _capture_panel(**kwargs) -> None:
+        shown_remaining_counts.append(int(kwargs["remaining_import_count"]))
+
+    monkeypatch.setattr(import_cmd, "render_transaction_panel", _capture_panel)
+    monkeypatch.setattr(
+        import_cmd,
+        "prompt_category_one_question",
+        lambda: CategorizeChoice("shared", "none"),
+    )
+
+    import_cmd.run_import(csv_path)
+
+    assert shown_remaining_counts == [2, 1]

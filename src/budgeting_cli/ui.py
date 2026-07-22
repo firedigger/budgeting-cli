@@ -94,7 +94,18 @@ def prompt_category_one_question() -> CategorizeChoice:
     ).ask()
 
 
-def render_transaction_panel(*, booking_date: date, status: str, amount_cents: int, currency: str, name: str, title: str, message: str, reference_number: str) -> None:
+def render_transaction_panel(
+    *,
+    booking_date: date,
+    status: str,
+    amount_cents: int,
+    currency: str,
+    name: str,
+    title: str,
+    message: str,
+    reference_number: str,
+    remaining_import_count: int | None = None,
+) -> None:
     table = Table(show_header=False, box=None, pad_edge=False)
     table.add_row("Date", f"{booking_date.isoformat()} ({status})")
     table.add_row("Amount", f"{format_eur(abs(amount_cents))} ({currency})")
@@ -107,4 +118,10 @@ def render_transaction_panel(*, booking_date: date, status: str, amount_cents: i
     if reference_number:
         table.add_row("Ref", reference_number)
 
-    console.print(Panel.fit(table, title="Transaction", border_style="cyan"))
+    panel_title = "Transaction"
+    if remaining_import_count is not None:
+        panel_title += (
+            f" ({remaining_import_count} remaining in this import, including this one)"
+        )
+
+    console.print(Panel.fit(table, title=panel_title, border_style="cyan"))
